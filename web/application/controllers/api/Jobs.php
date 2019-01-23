@@ -111,7 +111,12 @@ class Jobs extends CI_Controller
         // Return status from internal function (also return IDs) and clear the session as well
         $this->klsecurity->api_finish_request_output($this->global_functions->jobs_add($rules, $repositories_array, true));
     }
+    public function add_repo()
+    {
+	$repo_name	= $this->input->post('repo');
+	$this->global_functions->add_user_allowed_repository($repo_name);
 
+    }
     /*
     This function just tests the rules received by API for validity
     Required POST variables:

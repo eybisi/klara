@@ -175,6 +175,39 @@ class Global_functions
         }
         return $scan_filesets_array;
     }
+    public function add_user_allowed_repository($repo_name,$user_id=null)
+    {
+        // get group id
+	$this->CI->db->select('max(id)');
+	$q = $this->CI->db->get('scan_filesets');
+	$maxid = $q->result_array();
+        $maxid = intval($maxid[0]['max(id)']);
+	$user_group_id = $this->get_user_group_cnt ($user_id);
+	
+	// From this group id, extract the allower scan_filesets_list
+        $this->CI->db->select('scan_filesets_list');
+        $this->CI->db->where('cnt', "".$user_group_id);
+        $q = $this->CI->db->get('users_groups');
+        if ($q->num_rows() != 1)
+        {
+            $this->CI->klsecurity->log('warn','global_functions/get_user_allowed_repositories','User group doesn\'t exist: '.print_r ($user_group_id, true));
+            return array();
+        }
+        // We now have an aswer
+        // We have 1 result. Let's see it!
+        $entry = $q->result_array();
+        $scan_filesets_json     = $entry[0]['scan_filesets_list'];
+        $scan_filesets_array	= json_decode($scan_filesets_json);
+	
+	array_push($scan_filesets_array,$maxid+1);
+	$new_filesets 		= array('scan_filesets_list' => json_encode($scan_filesets_array));
+	$g_id 			= array('cnt'=> "".$user_group_id);
+	$this->CI->db->update('users_groups',$new_filesets,$g_id); 
+	$re 			= array('id' => $maxid+1,
+					'entry' => $repo_name);
+	$this->CI->db->insert('scan_filesets',$re);
+        
+    }
     // This function will return true or false whather an
     // an user_id (if specified) or the current user (if blank)
     // is jailed by the group policies
@@ -283,7 +316,7 @@ class Global_functions
         }
 
         if (!is_array($yara_fileset_scan))
-            return $this->api_generate_error_json("Invalid fileset scan");
+            return $this->api_generate_error_json($yara_fileset_scan);
 
         // We want all entries to be strings!
         foreach ($yara_fileset_scan as $repo_id)
